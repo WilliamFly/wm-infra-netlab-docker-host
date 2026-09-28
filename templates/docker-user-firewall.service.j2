@@ -1,0 +1,12 @@
+[Unit]
+Description=Restrict Docker-published ports via DOCKER-USER chain
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/docker-user-firewall.sh
+
+[Install]
+WantedBy=multi-user.target

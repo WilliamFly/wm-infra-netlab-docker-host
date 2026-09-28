@@ -1,0 +1,12 @@
+#!/bin/bash
+# Managed by Ansible (docker-host role) — do not edit by hand.
+# Restricts Docker-published container ports to their configured source.
+# ufw cannot see this traffic (Docker forwards it via its own DOCKER-USER
+# chain, ahead of ufw), so this is enforced independently, at boot,
+# instead of relying on iptables-persistent (which conflicts with ufw).
+set -e
+iptables -F DOCKER-USER
+{% for item in docker_published_ports %}
+iptables -I DOCKER-USER 1 -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -s {{ item.from }} -j RETURN
+iptables -A DOCKER-USER -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -j DROP
+{% endfor %}

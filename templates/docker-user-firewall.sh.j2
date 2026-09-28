@@ -6,7 +6,15 @@
 # instead of relying on iptables-persistent (which conflicts with ufw).
 set -e
 iptables -F DOCKER-USER
+
+# Always allow established/related traffic first. A reply packet (e.g. a
+# container's SYN-ACK) shows up here with the container's raw bridge IP
+# as its source — un-DNAT happens later, in POSTROUTING — so a per-port
+# source match alone would incorrectly drop legitimate replies. This
+# rule must come before the per-port rules below.
+iptables -A DOCKER-USER -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+
 {% for item in docker_published_ports %}
-iptables -I DOCKER-USER 1 -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -s {{ item.from }} -j ACCEPT
+iptables -A DOCKER-USER -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -s {{ item.from }} -j ACCEPT
 iptables -A DOCKER-USER -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -j DROP
 {% endfor %}

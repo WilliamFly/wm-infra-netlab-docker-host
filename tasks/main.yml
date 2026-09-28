@@ -60,23 +60,25 @@
     state: present
   when: docker_published_ports | length > 0
 
-- name: Allow configured Docker-published ports from their allowed source (DOCKER-USER)
-  ansible.builtin.iptables:
-    chain: DOCKER-USER
-    protocol: "{{ item.proto }}"
-    destination_port: "{{ item.port }}"
-    source: "{{ item.from }}"
-    jump: RETURN
-    action: insert
-  loop: "{{ docker_published_ports }}"
+- name: Flush DOCKER-USER chain (rebuilt fresh each run)
+  ansible.builtin.command: iptables -F DOCKER-USER
+  when: docker_published_ports | length > 0
+  changed_when: true
   notify: Save iptables rules
 
-- name: Drop Docker-published ports from any other source (DOCKER-USER)
-  ansible.builtin.iptables:
-    chain: DOCKER-USER
-    protocol: "{{ item.proto }}"
-    destination_port: "{{ item.port }}"
-    jump: DROP
-    action: append
+- name: Insert DOCKER-USER allow rule for configured source (per published port)
+  ansible.builtin.command: >
+    iptables -I DOCKER-USER 1 -p {{ item.proto }}
+    -m conntrack --ctorigdstport {{ item.port }}
+    -s {{ item.from }} -j RETURN
   loop: "{{ docker_published_ports }}"
+  changed_when: true
+  notify: Save iptables rules
+
+- name: Append DOCKER-USER drop rule for any other source (per published port)
+  ansible.builtin.command: >
+    iptables -A DOCKER-USER -p {{ item.proto }}
+    -m conntrack --ctorigdstport {{ item.port }} -j DROP
+  loop: "{{ docker_published_ports }}"
+  changed_when: true
   notify: Save iptables rules

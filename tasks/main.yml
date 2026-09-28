@@ -53,3 +53,30 @@
     groups: docker
     append: true
   loop: "{{ docker_host_users }}"
+
+- name: Install iptables-persistent (persists DOCKER-USER rules across reboot)
+  ansible.builtin.apt:
+    name: iptables-persistent
+    state: present
+  when: docker_published_ports | length > 0
+
+- name: Allow configured Docker-published ports from their allowed source (DOCKER-USER)
+  ansible.builtin.iptables:
+    chain: DOCKER-USER
+    protocol: "{{ item.proto }}"
+    destination_port: "{{ item.port }}"
+    source: "{{ item.from }}"
+    jump: RETURN
+    action: insert
+  loop: "{{ docker_published_ports }}"
+  notify: Save iptables rules
+
+- name: Drop Docker-published ports from any other source (DOCKER-USER)
+  ansible.builtin.iptables:
+    chain: DOCKER-USER
+    protocol: "{{ item.proto }}"
+    destination_port: "{{ item.port }}"
+    jump: DROP
+    action: append
+  loop: "{{ docker_published_ports }}"
+  notify: Save iptables rules

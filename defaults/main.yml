@@ -1,3 +1,12 @@
 # Users to add to the `docker` group (so they can run docker without sudo).
 # Typically the same admin user harden-baseline creates.
 docker_host_users: []
+
+# Docker-published container ports to restrict by source subnet.
+# ufw's own rules do NOT apply to Docker-published ports — Docker's
+# DOCKER-USER/DOCKER chains sit in the FORWARD chain ahead of ufw and
+# bypass its source-scoping entirely. This closes that gap directly.
+#   port:  required, e.g. "8081"
+#   proto: required, "tcp" or "udp"
+#   from:  required, CIDR allowed to reach this published port
+docker_published_ports: []

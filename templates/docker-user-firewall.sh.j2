@@ -7,6 +7,6 @@
 set -e
 iptables -F DOCKER-USER
 {% for item in docker_published_ports %}
-iptables -I DOCKER-USER 1 -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -s {{ item.from }} -j RETURN
+iptables -I DOCKER-USER 1 -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -s {{ item.from }} -j ACCEPT
 iptables -A DOCKER-USER -p {{ item.proto }} -m conntrack --ctorigdstport {{ item.port }} -j DROP
 {% endfor %}
